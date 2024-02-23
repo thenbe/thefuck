@@ -42,10 +42,29 @@ def match(command):
 def get_new_command(command):
     bin = command.script_parts[0]
     nixpkgs_names = get_nixpkgs_names(bin)
+    args = " ".join(command.script_parts[1:])  # everything but the command name
 
-    # Construct a command for each package name
-    commands = [
-        'nix-shell -p {} --run "{}"'.format(name, command.script)
-        for name in nixpkgs_names
+    # (unified CLI) Enters a non-interactive shell with the given package available, then runs the given command.
+    nix_shell = "nix shell nixpkgs#{} --command {}".format("{}", command.script)
+
+    # (unified CLI) Enters an interactive shell with the given package available, but does not run any command.
+    nix_shell_vanilla = "nix shell nixpkgs#{}"
+
+    # (original CLI) Enters a non-interactive shell with the given package available, then runs the given command.
+    nix_shell_original = 'nix-shell -p {} --run "{}"'.format("{}", command.script)
+
+    # (unified CLI) Enters a non-interactive shell with the given package available, then runs the given command.
+    if args:
+        nix_run = "nix run nixpkgs#{} -- {}".format("{}", args)
+    else:
+        nix_run = "nix run nixpkgs#{}"
+
+    patterns = [
+        nix_run,
+        nix_shell_vanilla,
+        nix_shell_original,
+        # nix_shell, # nix_run is generally preferred over this
     ]
+
+    commands = [pattern.format(name) for name in nixpkgs_names for pattern in patterns]
     return commands
